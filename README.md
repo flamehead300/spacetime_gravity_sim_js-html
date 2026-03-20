@@ -26,7 +26,7 @@ Two standalone entry points. No dependencies. No install.
 
 # Stellar Dynamics — Gravity Engine
 
-Real-time N-body simulation with arcade-fast interaction and relativistic-style approximations.
+Real-time browser N-body simulation with Newtonian, pseudo-Newtonian, and approximate post-Newtonian options.
 
 ## What this is
 
@@ -195,7 +195,7 @@ Adds a smooth central background potential that can help keep wider systems loos
 
 REALITY CONTROLS
 Button	Meaning
-START / HOLD ENGINES	Toggle simulation run state
+START / PAUSE	Toggle simulation run state
 SINGLE STEP	Advance one simulation step
 CLEAR	Remove all bodies
 SPAWN 100	Scatter 100 random bodies into the visible region
