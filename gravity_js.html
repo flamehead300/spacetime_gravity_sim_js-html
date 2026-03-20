@@ -1,0 +1,1069 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>STELLAR DYNAMICS // GRAVITY ENGINE (JS)</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+
+        html,
+        body {
+            height: 100%;
+            overflow: hidden;
+            background: #050a10
+        }
+
+        body {
+            display: flex;
+            font-family: 'Courier New', Courier, monospace;
+            color: #00e5cc
+        }
+
+        #cw {
+            flex: 1;
+            min-width: 0;
+            padding: 8px 0 8px 8px
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            outline: 1px solid #003d33;
+            cursor: crosshair
+        }
+
+        #panel {
+            width: 228px;
+            flex-shrink: 0;
+            background: #070e16;
+            border-left: 1px solid #00e5cc;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            padding: 10px 8px 14px;
+            scrollbar-width: thin;
+            scrollbar-color: #003d33 #070e16
+        }
+
+        .hdr {
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 1px
+        }
+
+        .sub {
+            font-size: 10px;
+            color: #005544;
+            margin-bottom: 10px
+        }
+
+        .sec {
+            border: 1px solid #00e5cc;
+            padding: 7px 7px 3px;
+            margin-bottom: 7px;
+            position: relative
+        }
+
+        .sec-t {
+            position: absolute;
+            top: -8px;
+            left: 6px;
+            background: #070e16;
+            padding: 0 3px;
+            font-size: 10px;
+            font-weight: bold
+        }
+
+        .lbl {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            margin-bottom: 1px
+        }
+
+        .lbl span {
+            color: #00b09c
+        }
+
+        .info {
+            font-size: 10px;
+            color: #00b09c;
+            line-height: 1.6;
+            margin-bottom: 3px
+        }
+
+        label.chk {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 10px;
+            cursor: pointer;
+            margin-bottom: 4px
+        }
+
+        input[type=checkbox] {
+            accent-color: #00e5cc;
+            width: 12px;
+            height: 12px;
+            cursor: pointer
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 4px;
+            background: #003d33;
+            border-radius: 2px;
+            outline: none;
+            margin-bottom: 5px;
+            cursor: pointer
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 10px;
+            height: 16px;
+            background: #00e5cc;
+            border-radius: 2px;
+            cursor: pointer
+        }
+
+        input[type=range]::-moz-range-thumb {
+            width: 10px;
+            height: 16px;
+            background: #00e5cc;
+            border-radius: 2px;
+            border: none;
+            cursor: pointer
+        }
+
+        button {
+            display: block;
+            width: 100%;
+            background: #070e16;
+            color: #00e5cc;
+            border: 1px solid #00e5cc;
+            font-family: inherit;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 5px 6px;
+            margin-bottom: 4px;
+            text-align: left;
+            cursor: crosshair
+        }
+
+        button:hover {
+            background: #003d33
+        }
+
+        button.warn {
+            color: #ffaa00;
+            border-color: #ffaa00
+        }
+
+        button.warn:hover {
+            background: #3d2600
+        }
+
+        button.active {
+            color: #ffaa00;
+            border-color: #ffaa00
+        }
+
+        .tele {
+            font-size: 11px;
+            line-height: 1.8
+        }
+    </style>
+</head>
+
+<body>
+    <div id="cw"><canvas id="sim"></canvas></div>
+    <div id="panel">
+        <div class="hdr">&#9656; STELLAR DYNAMICS</div>
+        <div class="sub">&nbsp;&nbsp;GRAVITY ENGINE v4.1 [JS]</div>
+
+        <div class="sec">
+            <span class="sec-t">BODY PARAMS</span>
+            <div class="lbl">SPAWN MASS <span id="mass-val">10,000</span></div>
+            <input type="range" id="mass" min="1" max="1000000" step="1" value="10000">
+            <div class="info" id="body-info"></div>
+        </div>
+
+        <div class="sec">
+            <span class="sec-t">PHYSICS ENGINE</span>
+            <div class="lbl">GRAVITY [G] <span id="G-val">25</span></div>
+            <input type="range" id="G" min="0" max="600" step="any" value="25">
+            <div class="lbl">SOFTENING [e] <span id="soft-val">1.5</span></div>
+            <input type="range" id="soft" min="0" max="25" step="0.1" value="1.5">
+            <div class="lbl">TIME STEP [dt] <span id="dt-val">0.005</span></div>
+            <input type="range" id="dt-sl" min="0.0001" max="0.0667" step="any" value="0.005">
+            <div class="lbl">DRAG COEFF <span id="damp-val">1.00</span></div>
+            <input type="range" id="damp" min="0.95" max="1.0" step="0.0001" value="1.0">
+            <div class="lbl">MAX VELOCITY <span id="vmax-val">8000</span></div>
+            <input type="range" id="vmax" min="0" max="10000" step="any" value="8000">
+        </div>
+
+        <div class="sec">
+            <span class="sec-t">RELATIVITY APPROX</span>
+            <label class="chk"><input type="checkbox" id="use-rel" checked> PSEUDO-NEWTONIAN</label>
+            <label class="chk"><input type="checkbox" id="use-1pn"> 1PN APPROX</label>
+            <label class="chk"><input type="checkbox" id="use-2pn"> 2PN BOOSTED APPROX</label>
+            <label class="chk"><input type="checkbox" id="gw-damp" checked> GW DAMPING (HEAVY)</label>
+            <label class="chk"><input type="checkbox" id="show-hor" checked> SHOW EVENT HORIZONS</label>
+            <div class="lbl">LIGHTSPEED [c] <span id="c-val">8000</span></div>
+            <input type="range" id="c-sl" min="200" max="10000" step="10" value="8000">
+            <div class="info" id="rel-info">MODE: PACZYNSKI-WIITA</div>
+        </div>
+
+        <div class="sec">
+            <span class="sec-t">COLLISION</span>
+            <label class="chk"><input type="checkbox" id="use-frag"> FRAGMENTATION</label>
+            <label class="chk"><input type="checkbox" id="tidal-frag" checked> TIDAL DISRUPTION</label>
+            <label class="chk"><input type="checkbox" id="ejecta"> MERGER EJECTA</label>
+            <div class="lbl">RESTITUTION [e] <span id="rest-val">0.00</span></div>
+            <input type="range" id="rest-sl" min="0" max="0.99" step="0.01" value="0">
+            <div class="info">0=MERGE &nbsp; 1=ELASTIC</div>
+            <div class="lbl">FRAG SPEED <span id="frag-val">250</span></div>
+            <input type="range" id="frag-sl" min="10" max="2000" step="10" value="250">
+        </div>
+
+        <div class="sec">
+            <span class="sec-t">ADVANCED</span>
+            <label class="chk"><input type="checkbox" id="adaptive-dt"> ADAPTIVE DT</label>
+            <label class="chk"><input type="checkbox" id="use-leapfrog"> LEAPFROG INTEGRATOR</label>
+            <label class="chk"><input type="checkbox" id="realistic-radii"> REALISTIC RADII</label>
+            <label class="chk"><input type="checkbox" id="dark-matter"> DARK MATTER HALO</label>
+            <label class="chk"><input type="checkbox" id="show-trails"> BODY TRAILS</label>
+        </div>
+
+        <div class="sec">
+            <span class="sec-t">REALITY CONTROLS</span>
+            <button id="run-btn">&#9654;&#160; START</button>
+            <button id="step-btn">&#9658;&#9658; SINGLE STEP</button>
+            <button id="clear-btn" class="warn">&#10005;&#160;&#160; CLEAR </button>
+            <button id="spawn-btn">&#9675;&#160;&#160; SPAWN 100</button>
+        </div>
+
+        <div class="sec">
+            <span class="sec-t">TELEMETRY</span>
+            <div class="tele" id="stats">BODIES&#160;&#160;0<br>RENDER&#160;&#160;-- fps<br>PHYSICS&#160;--
+                ms<br>MODE&#160;&#160;&#160;NORMAL</div>
+        </div>
+    </div>
+
+    <script>
+        // ═══════════════════════════════════════════════════════════════════
+        // PHYSICS ENGINE
+        // ═══════════════════════════════════════════════════════════════════
+        const MASS_MIN = 1, MASS_MAX = 1000000;
+        const R_MIN = 1.0, R_MAX = 10.0;
+        const _CBRT_MIN = Math.cbrt(MASS_MIN);
+        const _CBRT_MAX = Math.cbrt(MASS_MAX);
+        const _DAMPING_REF_DT = 1 / 360;
+        // PATCH 4: Lowered from 64 — 8 passes is plenty for interactive demos
+        const _MAX_COLL = 8;
+
+        function randColor() {
+            const ch = () => 140 + Math.floor(Math.random() * 116);
+            return `rgb(${ch()},${ch()},${ch()})`;
+        }
+
+        class PhysicsEngine {
+            constructor() {
+                this.bodies = [];
+                this.next_id = 0;
+
+                // Physics params
+                this.G = 25.0;
+                this.softening = 1.5;
+                this.dt = 0.005;
+                this.damping = 1.0;
+                this.max_speed = 8000.0;
+                this.c = 8000.0;
+
+                // Flags
+                this.use_rel = true;
+                this.use_1pn = false;
+                this.use_2pn = false;
+                this.gw_damping = true;
+                this.gw_mass_threshold = 100000.0;
+                this.tidal_frag = true;
+                this.adaptive_dt = false;
+                this.dt_min = 0.0005;
+                this.dt_max = 0.01;
+                this.realistic_radii = false;
+                this.use_leapfrog = false;
+                this.ejecta_enabled = false;
+                this.dark_matter = false;
+                this.dm_scale = 1000.0;
+                this.dm_mass = 1e7;
+                this.restitution = 0.0;
+                this.frag_enabled = false;
+                this.frag_threshold = 250.0;
+
+                // PATCH 1: Skip collision resolution above this body count
+                this.collision_limit = 250;
+                // PATCH 5: Hard cap on total body count
+                this.max_bodies = 1200;
+
+                // Pre-allocated typed arrays to reduce GC pressure
+                this.ax = new Float64Array(0);
+                this.ay = new Float64Array(0);
+            }
+
+            _massToR(m) {
+                let c = Math.max(MASS_MIN, Math.min(MASS_MAX, m));
+                if (!this.realistic_radii) {
+                    return R_MIN + (Math.cbrt(c) - _CBRT_MIN) * (R_MAX - R_MIN) / (_CBRT_MAX - _CBRT_MIN);
+                }
+                const rocky_max = 100000.0, gas_max = 1000000.0;
+                if (c <= rocky_max) return Math.max(R_MIN, Math.min(R_MAX, Math.cbrt(c)));
+                if (c <= gas_max) {
+                    let rocky_r = Math.cbrt(rocky_max);
+                    return Math.max(R_MIN, Math.min(R_MAX, rocky_r * Math.pow(c / rocky_max, 0.55)));
+                }
+                return Math.max(R_MIN, Math.min(R_MAX, 10.0 * Math.cbrt(gas_max / c)));
+            }
+
+            _rs(m) {
+                return this.c > 0 ? (2 * this.G * m) / (this.c * this.c) : 0;
+            }
+
+            refreshRadii() {
+                for (let b of this.bodies) b.r = this._massToR(b.m);
+            }
+
+            setParams(params) {
+                let refresh = false;
+                for (let [k, v] of Object.entries(params)) {
+                    if (this.hasOwnProperty(k)) this[k] = v;
+                    if (k === 'realistic_radii') refresh = true;
+                }
+                if (this.dt_min > this.dt_max) [this.dt_min, this.dt_max] = [this.dt_max, this.dt_min];
+                if (this.use_2pn) this.use_1pn = true;
+                else if (!this.use_1pn) this.use_2pn = false;
+                if (refresh) this.refreshRadii();
+            }
+
+            // PATCH 5: Returns false when at cap so callers can break out of spawn loops
+            addBody(x, y, vx, vy, m) {
+                if (this.bodies.length >= this.max_bodies) return false;
+                this.bodies.push({
+                    id: this.next_id++, x, y, vx, vy, m: Number(m),
+                    r: this._massToR(m), color: randColor()
+                });
+                return true;
+            }
+
+            clear() {
+                this.bodies = [];
+            }
+
+            _estimateDt() {
+                let dt = Math.max(this.dt_min, Math.min(this.dt_max, this.dt));
+                if (!this.adaptive_dt || this.bodies.length < 2) return dt;
+
+                let max_a = 0.0;
+                for (let i = 0; i < this.bodies.length; i++) {
+                    let a = Math.hypot(this.ax[i], this.ay[i]);
+                    if (a > max_a) max_a = a;
+                }
+                if (max_a <= 0) return dt;
+                let allowable_error = this.softening * 0.5;
+                let dt_est = Math.sqrt(2 * allowable_error / max_a);
+                return Math.max(this.dt_min, Math.min(this.dt_max, Math.min(dt, dt_est)));
+            }
+
+            _merge(si, di) {
+                let s = this.bodies[si], d = this.bodies[di];
+                let m1 = s.m, m2 = d.m;
+                let mt = (m1 + m2) || 1;
+                let vrelx = s.vx - d.vx, vrely = s.vy - d.vy;
+                let rel_ke = 0.5 * (m1 * m2 / mt) * (vrelx * vrelx + vrely * vrely);
+                let ejecta_mass = 0.0;
+                if (this.ejecta_enabled && this.restitution < 0.05 && mt > 2.0 && rel_ke > this.frag_threshold * 0.5) {
+                    ejecta_mass = Math.min(Math.max(1.0, mt * 0.01), mt * 0.25);
+                }
+                let merged_mass = mt - ejecta_mass;
+                d.x = (m1 * s.x + m2 * d.x) / mt;
+                d.y = (m1 * s.y + m2 * d.y) / mt;
+                d.vx = (m1 * s.vx + m2 * d.vx) / mt;
+                d.vy = (m1 * s.vy + m2 * d.vy) / mt;
+                d.m = merged_mass;
+                d.r = this._massToR(merged_mass);
+                this.bodies.splice(si, 1);
+                if (ejecta_mass > 0) {
+                    let angle = Math.random() * 2 * Math.PI;
+                    let speed = Math.sqrt(2 * rel_ke / ejecta_mass) * 0.25;
+                    this.addBody(d.x, d.y, d.vx + Math.cos(angle) * speed, d.vy + Math.sin(angle) * speed, ejecta_mass);
+                }
+            }
+
+            _fragment(si, di) {
+                let s = this.bodies[si], d = this.bodies[di];
+                let m1 = s.m, m2 = d.m, mt = m1 + m2;
+                let cmx = (m1 * s.x + m2 * d.x) / mt;
+                let cmy = (m1 * s.y + m2 * d.y) / mt;
+                let cmvx = (m1 * s.vx + m2 * d.vx) / mt;
+                let cmvy = (m1 * s.vy + m2 * d.vy) / mt;
+                let dvx = s.vx - d.vx, dvy = s.vy - d.vy;
+                let rel_ke = 0.5 * (m1 * m2 / mt) * (dvx * dvx + dvy * dvy);
+                let ej_speed = Math.sqrt(Math.max(0, 2 * rel_ke / mt)) * 0.5 + this.frag_threshold * 0.15;
+                let hi = Math.max(si, di), lo = Math.min(si, di);
+                this.bodies.splice(hi, 1);
+                this.bodies.splice(lo, 1);
+                let frag_m = Math.max(1.0, mt / 3);
+                let fr = this._massToR(frag_m);
+                for (let k = 0; k < 3; k++) {
+                    let angle = 2 * Math.PI * k / 3 + (Math.random() - 0.5) * 0.4;
+                    let spd = ej_speed * (0.8 + Math.random() * 0.4);
+                    this.addBody(
+                        cmx + Math.cos(angle) * (fr + 1) * 2.5,
+                        cmy + Math.sin(angle) * (fr + 1) * 2.5,
+                        cmvx + Math.cos(angle) * spd,
+                        cmvy + Math.sin(angle) * spd,
+                        frag_m
+                    );
+                }
+            }
+
+            _tidalFragment(i, j) {
+                let bi = this.bodies[i], bj = this.bodies[j];
+                if (bi.m > bj.m) { [i, j] = [j, i];[bi, bj] = [this.bodies[i], this.bodies[j]]; }
+                if (bi.m <= 0) return false;
+                let r_roche = bi.r * Math.pow((2 * bj.m / bi.m), 1 / 3);
+                let dx = bj.x - bi.x, dy = bj.y - bi.y;
+                let dist = Math.hypot(dx, dy);
+                if (dist <= 0 || dist >= r_roche) return false;
+                let disrupted = this.bodies.splice(i, 1)[0];
+                let frag_m = Math.max(1.0, disrupted.m / 3.0);
+                let fr = this._massToR(frag_m);
+                let tangent = Math.atan2(dy, dx) + Math.PI / 2;
+                let rel_speed = Math.hypot(disrupted.vx - bj.vx, disrupted.vy - bj.vy);
+                let spread = Math.max(rel_speed, this.frag_threshold * 0.15);
+                for (let k = 0; k < 3; k++) {
+                    let angle = tangent + (k - 1) * 0.65 + (Math.random() - 0.5) * 0.2;
+                    let speed = spread * (0.6 + Math.random() * 0.4);
+                    this.addBody(
+                        disrupted.x + Math.cos(angle) * (fr + 1) * 2.0,
+                        disrupted.y + Math.sin(angle) * (fr + 1) * 2.0,
+                        disrupted.vx + Math.cos(angle) * speed,
+                        disrupted.vy + Math.sin(angle) * speed,
+                        frag_m
+                    );
+                }
+                return true;
+            }
+
+            _collectPairs() {
+                let out = [];
+                let bs = this.bodies, n = bs.length;
+                for (let i = 0; i < n - 1; i++) {
+                    let bi = bs[i];
+                    for (let j = i + 1; j < n; j++) {
+                        let bj = bs[j];
+                        let dx = bj.x - bi.x, dy = bj.y - bi.y;
+                        let lim = bi.r + bj.r;
+                        let d2 = dx * dx + dy * dy;
+                        if (d2 >= lim * lim) continue;
+                        let dist = Math.sqrt(d2);
+                        let hash = bi.id * 2000000 + bj.id;
+                        out.push({ overlap: lim - dist, hash, i, j, dist, dx, dy });
+                    }
+                }
+                out.sort((a, b) => (b.overlap !== a.overlap) ? b.overlap - a.overlap : b.hash - a.hash);
+                return out;
+            }
+
+            _resolve() {
+                for (let iter = 0; iter < _MAX_COLL; iter++) {
+                    let pairs = this._collectPairs();
+                    if (!pairs.length) break;
+                    let { i, j, dist, dx, dy } = pairs[0];
+                    let bi = this.bodies[i], bj = this.bodies[j];
+                    let d = Math.max(dist, 1e-9);
+                    let nx = dx / d, ny = dy / d;
+                    let dvx = bi.vx - bj.vx, dvy = bi.vy - bj.vy;
+                    let dvn = dvx * nx + dvy * ny;
+
+                    if (this.tidal_frag && this.restitution < 0.05 && this._tidalFragment(i, j)) continue;
+
+                    if (this.restitution < 0.05) {
+                        if (this.frag_enabled && Math.abs(dvn) > this.frag_threshold) {
+                            this._fragment(i, j);
+                        } else {
+                            let dst = bi.m >= bj.m ? i : j;
+                            let src = dst === i ? j : i;
+                            this._merge(src, dst);
+                        }
+                    } else {
+                        if (dvn > 0) {
+                            let mi = bi.m, mj = bj.m;
+                            let ji = (1 + this.restitution) * dvn * mi * mj / (mi + mj);
+                            bi.vx -= ji / mi * nx; bi.vy -= ji / mi * ny;
+                            bj.vx += ji / mj * nx; bj.vy += ji / mj * ny;
+                        }
+                        let sep = bi.r + bj.r - dist + 0.05;
+                        let mt = bi.m + bj.m;
+                        bi.x -= nx * sep * bj.m / mt; bi.y -= ny * sep * bj.m / mt;
+                        bj.x += nx * sep * bi.m / mt; bj.y += ny * sep * bi.m / mt;
+                    }
+                }
+            }
+
+            _computeAccelerations(dt) {
+                let bs = this.bodies, n = bs.length;
+                if (this.ax.length < n) {
+                    this.ax = new Float64Array(n * 2);
+                    this.ay = new Float64Array(n * 2);
+                }
+                this.ax.fill(0, 0, n);
+                this.ay.fill(0, 0, n);
+
+                let G = this.G, c = this.c, eps2 = this.softening * this.softening;
+
+                for (let i = 0; i < n - 1; i++) {
+                    let bi = bs[i];
+                    for (let j = i + 1; j < n; j++) {
+                        let bj = bs[j];
+                        let dx = bj.x - bi.x, dy = bj.y - bi.y;
+                        let rs2 = dx * dx + dy * dy + eps2;
+                        if (rs2 < 1e-9) continue;
+
+                        if (!this.use_rel) {
+                            let ir3 = Math.pow(rs2, -1.5);
+                            let si = G * bj.m * ir3, sj = G * bi.m * ir3;
+                            this.ax[i] += dx * si; this.ay[i] += dy * si;
+                            this.ax[j] -= dx * sj; this.ay[j] -= dy * sj;
+                        } else if (!this.use_1pn) {
+                            let rs = Math.sqrt(rs2);
+                            let di = Math.max(rs - this._rs(bj.m), 1);
+                            let dj = Math.max(rs - this._rs(bi.m), 1);
+                            let ir = 1 / rs;
+                            let si = G * bj.m * ir / (di * di);
+                            let sj = G * bi.m * ir / (dj * dj);
+                            this.ax[i] += dx * si; this.ay[i] += dy * si;
+                            this.ax[j] -= dx * sj; this.ay[j] -= dy * sj;
+                        } else {
+                            let rs = Math.sqrt(rs2), ir = 1.0 / rs, ir3 = ir / rs2;
+                            let si = G * bj.m * ir3, sj = G * bi.m * ir3;
+                            this.ax[i] += dx * si; this.ay[i] += dy * si;
+                            this.ax[j] -= dx * sj; this.ay[j] -= dy * sj;
+
+                            let c2 = c * c;
+                            let nx = dx * ir, ny = dy * ir;
+                            let vi2 = bi.vx * bi.vx + bi.vy * bi.vy;
+                            let vj2 = bj.vx * bj.vx + bj.vy * bj.vy;
+                            let vivj = bi.vx * bj.vx + bi.vy * bj.vy;
+                            let vi_n = bi.vx * nx + bi.vy * ny;
+                            let vj_n = bj.vx * nx + bj.vy * ny;
+                            let Gmi_r = G * bi.m * ir, Gmj_r = G * bj.m * ir;
+                            let ir2 = ir * ir;
+                            let dvx2 = bi.vx - bj.vx, dvy2 = bi.vy - bj.vy;
+
+                            let fi_f = G * bj.m * ir2 / c2;
+                            let fi_s = -vi2 - 2 * vj2 + 4 * vivj + 1.5 * vj_n * vj_n + 5 * Gmi_r + 4 * Gmj_r;
+                            let fi_v = 4 * vi_n - 3 * vj_n;
+                            let pn1_ix = fi_f * (nx * fi_s + dvx2 * fi_v);
+                            let pn1_iy = fi_f * (ny * fi_s + dvy2 * fi_v);
+                            this.ax[i] += pn1_ix; this.ay[i] += pn1_iy;
+
+                            let fj_f = G * bi.m * ir2 / c2;
+                            let fj_s = -vj2 - 2 * vi2 + 4 * vivj + 1.5 * vi_n * vi_n + 5 * Gmj_r + 4 * Gmi_r;
+                            let fj_v = 4 * vj_n - 3 * vi_n;
+                            let pn1_jx = fj_f * (-nx * fj_s + dvx2 * fj_v);
+                            let pn1_jy = fj_f * (-ny * fj_s + dvy2 * fj_v);
+                            this.ax[j] += pn1_jx; this.ay[j] += pn1_jy;
+
+                            if (this.use_2pn) {
+                                let pn_boost = Math.min(0.35, 2.0 * (0.5 * (vi2 + vj2) + Gmi_r + Gmj_r) / c2);
+                                this.ax[i] += pn_boost * pn1_ix; this.ay[i] += pn_boost * pn1_iy;
+                                this.ax[j] += pn_boost * pn1_jx; this.ay[j] += pn_boost * pn1_jy;
+                            }
+                        }
+
+                        if (this.use_rel && this.gw_damping &&
+                            (bi.m >= this.gw_mass_threshold || bj.m >= this.gw_mass_threshold)) {
+                            let r = Math.sqrt(rs2);
+                            if (r > 0) {
+                                let vrelx = bj.vx - bi.vx, vrely = bj.vy - bi.vy;
+                                let vrel2 = vrelx * vrelx + vrely * vrely;
+                                if (vrel2 > 1e-12) {
+                                    let vrel = Math.sqrt(vrel2);
+                                    let ux = vrelx / vrel, uy = vrely / vrel;
+                                    let beta2 = Math.min(1.0, vrel2 / Math.max(c * c, 1e-9));
+                                    let mi = Math.max(bi.m, 1e-9), mj = Math.max(bj.m, 1e-9);
+                                    let dE_dt = (32.0 / 5.0) * (
+                                        Math.pow(G, 4) * mi * mi * mj * mj * (mi + mj) /
+                                        Math.max(Math.pow(c, 5) * Math.pow(r, 5), 1e-9)
+                                    );
+                                    let force = (dE_dt / vrel) * beta2;
+                                    let reduced_mass = mi * mj / (mi + mj);
+                                    let max_force = 0.25 * reduced_mass * vrel / Math.max(dt, 1e-9);
+                                    force = Math.min(force, max_force);
+                                    this.ax[i] += ux * (force / mi); this.ay[i] += uy * (force / mi);
+                                    this.ax[j] -= ux * (force / mj); this.ay[j] -= uy * (force / mj);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (this.dark_matter) {
+                    let scale2 = this.dm_scale * this.dm_scale;
+                    for (let i = 0; i < n; i++) {
+                        let b = bs[i], r2 = b.x * b.x + b.y * b.y;
+                        if (r2 >= 1e-9) {
+                            let factor = -G * this.dm_mass / Math.pow(r2 + scale2, 1.5);
+                            this.ax[i] += b.x * factor; this.ay[i] += b.y * factor;
+                        }
+                    }
+                }
+            }
+
+            step(n = 1) {
+                for (let i = 0; i < n; i++) this._stepOnce();
+            }
+
+            _stepOnce() {
+                if (!this.bodies.length) return;
+
+                // PATCH 1: Only run expensive collision resolution for smaller scenes
+                const doCollisions = this.bodies.length <= this.collision_limit;
+                if (doCollisions) this._resolve();
+
+                // Compute accelerations first so _estimateDt() sees the current field,
+                // not last frame's stale values (or zeros on the very first step).
+                this._computeAccelerations(this.dt);
+                let dt = this._estimateDt();
+                let drag = Math.pow(this.damping, dt / _DAMPING_REF_DT);
+                let vcap = this.use_rel ? Math.min(this.max_speed, this.c) : this.max_speed;
+                let vcap2 = vcap * vcap;
+                let bs = this.bodies;
+
+                if (this.use_leapfrog) {
+                    // Leapfrog reuses the already-computed accelerations for the first half-kick
+                    // then recomputes after the position update for the second half-kick.
+                    // Re-use this.ax/ay already filled above — just do the half-kick directly.
+                    for (let i = 0; i < bs.length; i++) {
+                        bs[i].vx += this.ax[i] * dt * 0.5;
+                        bs[i].vy += this.ay[i] * dt * 0.5;
+                        bs[i].x += bs[i].vx * dt;
+                        bs[i].y += bs[i].vy * dt;
+                    }
+                    this._computeAccelerations(dt);
+                    for (let i = 0; i < bs.length; i++) {
+                        let b = bs[i];
+                        b.vx = (b.vx + this.ax[i] * dt * 0.5) * drag;
+                        b.vy = (b.vy + this.ay[i] * dt * 0.5) * drag;
+                        let v2 = b.vx * b.vx + b.vy * b.vy;
+                        if (v2 > vcap2) { let s = vcap / Math.sqrt(v2); b.vx *= s; b.vy *= s; }
+                    }
+                } else {
+                    for (let i = 0; i < bs.length; i++) {
+                        let b = bs[i];
+                        b.vx = (b.vx + this.ax[i] * dt) * drag;
+                        b.vy = (b.vy + this.ay[i] * dt) * drag;
+                        let v2 = b.vx * b.vx + b.vy * b.vy;
+                        if (v2 > vcap2) { let s = vcap / Math.sqrt(v2); b.vx *= s; b.vy *= s; }
+                        b.x += b.vx * dt;
+                        b.y += b.vy * dt;
+                    }
+                }
+
+                if (doCollisions) this._resolve();
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // UI & RENDERING
+        // ═══════════════════════════════════════════════════════════════════
+        const canvas = document.getElementById("sim");
+        const ctx = canvas.getContext("2d");
+        const $ = id => document.getElementById(id);
+
+        const engine = new PhysicsEngine();
+
+        function resizeCanvas() {
+            canvas.width = canvas.offsetWidth || 800;
+            canvas.height = canvas.offsetHeight || 600;
+        }
+        window.addEventListener("resize", resizeCanvas);
+        resizeCanvas();
+
+        let VIEW_SCALE = 10.0;
+        const THROW_SCALE = 2.0;
+        const HOR_COLOR = "#cc44ff";
+        const HUD_COLOR = "#003d33";
+
+        let cameraX = 0, cameraY = 0;
+        let running = false;
+        let spawnMass = 10000;
+        let showHor = true;
+        let showTrails = false;
+        const trailMap = new Map(); // body id → [{x,y}, ...]
+        const TRAIL_MAX = 200;
+
+        function rsRadius(G, m, c) { return c > 0 ? (2 * G * m) / (c * c) : 0; }
+        function fmt(n) {
+            const a = Math.abs(n);
+            return a >= 1000 ? n.toFixed(0) : a >= 10 ? n.toFixed(1) : n.toPrecision(3);
+        }
+
+        function trackCamera() {
+            const bs = engine.bodies;
+            if (!bs.length) return;
+            let totalM = 0, cmX = 0, cmY = 0;
+            for (let i = 0; i < bs.length; i++) {
+                totalM += bs[i].m;
+                cmX += bs[i].m * bs[i].x;
+                cmY += bs[i].m * bs[i].y;
+            }
+            cameraX = cmX / totalM;
+            cameraY = cmY / totalM;
+        }
+
+        function nextFrame() {
+            return new Promise(resolve => requestAnimationFrame(resolve));
+        }
+
+        // PATCH 2: Much more aggressive step throttling by body count
+        function stepsPerFrame(bodyCount) {
+            if (bodyCount <= 80) return 4;
+            if (bodyCount <= 150) return 2;
+            if (bodyCount <= 300) return 1;
+            return 0;
+        }
+
+        // ── Render Loop ──────────────────────────────────────────────────
+        let lastT = performance.now(), fpsVal = null, frameCount = 0, fpsAccum = 0;
+        let stepMs = 0;
+
+        function worldToScreen(x, y) {
+            return {
+                x: (x - cameraX) / VIEW_SCALE + canvas.width / 2,
+                y: (y - cameraY) / VIEW_SCALE + canvas.height / 2,
+            };
+        }
+        function screenToWorld(x, y) {
+            return {
+                x: (x - canvas.width / 2) * VIEW_SCALE + cameraX,
+                y: (y - canvas.height / 2) * VIEW_SCALE + cameraY,
+            };
+        }
+
+        function drawHUD() {
+            const W = canvas.width, H = canvas.height, L = 30;
+            ctx.strokeStyle = HUD_COLOR; ctx.lineWidth = 2; ctx.setLineDash([]);
+            for (const [ox, oy, sx, sy] of [[4, 4, 1, 1], [W - 4, 4, -1, 1], [4, H - 4, 1, -1], [W - 4, H - 4, -1, -1]]) {
+                ctx.beginPath();
+                ctx.moveTo(ox, oy); ctx.lineTo(ox + sx * L, oy);
+                ctx.moveTo(ox, oy); ctx.lineTo(ox, oy + sy * L);
+                ctx.stroke();
+            }
+            ctx.fillStyle = HUD_COLOR; ctx.font = "11px 'Courier New'";
+            ctx.fillText("STELLAR DYNAMICS  //  GRAVITY ENGINE  [JS]", 16, 20);
+            ctx.setLineDash([]);
+        }
+
+        function render(now) {
+            const elapsed = Math.min((now - lastT) / 1000, 0.25);
+            lastT = now;
+            frameCount++; fpsAccum += elapsed;
+
+            // PATCH 2: steps=0 means too many bodies — skip physics rather than hanging
+            if (running && engine.bodies.length > 0) {
+                const steps = stepsPerFrame(engine.bodies.length);
+                if (steps > 0) {
+                    const t0 = performance.now();
+                    engine.step(steps);
+                    stepMs = performance.now() - t0;
+                } else {
+                    stepMs = 0;
+                }
+            }
+
+            trackCamera();
+
+            if (fpsAccum >= 0.5) {
+                fpsVal = frameCount / fpsAccum;
+                frameCount = fpsAccum = 0;
+                updateStats();
+            }
+
+            ctx.fillStyle = "#050a10";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const bodies = engine.bodies;
+
+            // ── Trails ───────────────────────────────────────────────────
+            // Prune trails for bodies that no longer exist
+            if (trailMap.size) {
+                const liveIds = new Set(bodies.map(b => b.id));
+                for (const id of trailMap.keys()) {
+                    if (!liveIds.has(id)) trailMap.delete(id);
+                }
+            }
+            if (showTrails) {
+                // Record current position for each body
+                for (let i = 0; i < bodies.length; i++) {
+                    const b = bodies[i];
+                    let trail = trailMap.get(b.id);
+                    if (!trail) { trail = []; trailMap.set(b.id, trail); }
+                    trail.push({ x: b.x, y: b.y });
+                    if (trail.length > TRAIL_MAX) trail.shift();
+                }
+                // Draw trails
+                ctx.lineWidth = 0.8;
+                ctx.setLineDash([]);
+                for (let i = 0; i < bodies.length; i++) {
+                    const b = bodies[i];
+                    const trail = trailMap.get(b.id);
+                    if (!trail || trail.length < 2) continue;
+                    ctx.strokeStyle = b.color;
+                    ctx.beginPath();
+                    let p = worldToScreen(trail[0].x, trail[0].y);
+                    ctx.moveTo(p.x, p.y);
+                    for (let t = 1; t < trail.length; t++) {
+                        ctx.globalAlpha = t / trail.length * 0.6;
+                        p = worldToScreen(trail[t].x, trail[t].y);
+                        ctx.lineTo(p.x, p.y);
+                    }
+                    ctx.stroke();
+                    ctx.globalAlpha = 1;
+                }
+            }
+
+            if (showHor && engine.use_rel) {
+                ctx.strokeStyle = HOR_COLOR; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+                for (let i = 0; i < bodies.length; i++) {
+                    const b = bodies[i];
+                    const rs = rsRadius(engine.G, b.m, engine.c) / VIEW_SCALE;
+                    if (rs <= 1) continue;
+                    const p = worldToScreen(b.x, b.y);
+                    if (p.x + rs < 0 || p.x - rs > canvas.width || p.y + rs < 0 || p.y - rs > canvas.height) continue;
+                    ctx.beginPath(); ctx.arc(p.x, p.y, rs, 0, Math.PI * 2); ctx.stroke();
+                }
+                ctx.setLineDash([]);
+            }
+
+            for (let i = 0; i < bodies.length; i++) {
+                const b = bodies[i];
+                const sr = Math.max(0.5, b.r / VIEW_SCALE);
+                const p = worldToScreen(b.x, b.y);
+                if (p.x + sr < 0 || p.x - sr > canvas.width || p.y + sr < 0 || p.y - sr > canvas.height) continue;
+                ctx.fillStyle = b.color;
+                ctx.beginPath(); ctx.arc(p.x, p.y, sr, 0, Math.PI * 2); ctx.fill();
+            }
+
+            if (dragging) {
+                const start = worldToScreen(dragStartWorld.x, dragStartWorld.y);
+                const r = engine._massToR(spawnMass) / VIEW_SCALE;
+                ctx.strokeStyle = "#00e5cc"; ctx.lineWidth = 1; ctx.setLineDash([]);
+                ctx.beginPath(); ctx.arc(start.x, start.y, r, 0, Math.PI * 2); ctx.stroke();
+                ctx.setLineDash([4, 2]);
+                ctx.beginPath(); ctx.moveTo(start.x, start.y);
+                ctx.lineTo(dragCurScreen.x, dragCurScreen.y); ctx.stroke(); ctx.setLineDash([]);
+            }
+
+            drawHUD();
+            requestAnimationFrame(render);
+        }
+        requestAnimationFrame(render);
+
+        // ── Mouse ────────────────────────────────────────────────────────
+        let dragging = false, dragStartWorld = { x: 0, y: 0 }, dragCurScreen = { x: 0, y: 0 };
+        function canvasXY(e) {
+            const r = canvas.getBoundingClientRect();
+            return {
+                x: (e.clientX - r.left) * (canvas.width / r.width),
+                y: (e.clientY - r.top) * (canvas.height / r.height),
+            };
+        }
+        canvas.addEventListener("mousedown", e => {
+            dragCurScreen = canvasXY(e);
+            dragStartWorld = screenToWorld(dragCurScreen.x, dragCurScreen.y);
+            dragging = true;
+        });
+        window.addEventListener("mousemove", e => { if (dragging) dragCurScreen = canvasXY(e); });
+        window.addEventListener("mouseup", e => {
+            if (!dragging) return;
+            dragging = false;
+            dragCurScreen = canvasXY(e);
+            const p = screenToWorld(dragCurScreen.x, dragCurScreen.y);
+            engine.addBody(
+                dragStartWorld.x, dragStartWorld.y,
+                (dragStartWorld.x - p.x) * THROW_SCALE,
+                (dragStartWorld.y - p.y) * THROW_SCALE,
+                spawnMass
+            );
+            trackCamera();
+            updateStats();
+        });
+        window.addEventListener("blur", () => { dragging = false; });
+
+        // ── Scroll-wheel / trackpad zoom ─────────────────────────────────
+        canvas.addEventListener("wheel", e => {
+            e.preventDefault();
+            const factor = e.deltaY > 0 ? 1.12 : 1 / 1.12;
+            const mouse = canvasXY(e);
+            // Keep the world point under the cursor fixed as we rescale
+            const wx = (mouse.x - canvas.width / 2) * VIEW_SCALE + cameraX;
+            const wy = (mouse.y - canvas.height / 2) * VIEW_SCALE + cameraY;
+            VIEW_SCALE = Math.max(0.5, Math.min(5000, VIEW_SCALE * factor));
+            cameraX = wx - (mouse.x - canvas.width / 2) * VIEW_SCALE;
+            cameraY = wy - (mouse.y - canvas.height / 2) * VIEW_SCALE;
+        }, { passive: false });
+
+        // ── UI Binding ───────────────────────────────────────────────────
+        function updateMassInfo() {
+            const r = engine._massToR(spawnMass);
+            const rs = engine.use_rel ? rsRadius(engine.G, spawnMass, engine.c) : 0;
+            $("mass-val").textContent = spawnMass.toLocaleString();
+            $("body-info").innerHTML =
+                `MASS&#160;&#160;&#160;${spawnMass.toLocaleString()}<br>` +
+                `RADIUS&#160;${r.toFixed(2)} px<br>` +
+                `r_s&#160;&#160;&#160;&#160;${rs.toFixed(2)} px`;
+        }
+
+        function updateStats() {
+            const fps = fpsVal != null ? fpsVal.toFixed(1) : "--";
+            const sms = stepMs != null ? stepMs.toFixed(1) : "--";
+            const n = engine.bodies.length;
+            // PATCH 6: Surface throttle/cap state in telemetry so it looks intentional
+            const mode = n >= engine.max_bodies ? "BODY CAP"
+                : stepsPerFrame(n) === 0 ? "THROTTLED"
+                    : "NORMAL";
+            $("stats").innerHTML =
+                `BODIES&#160;&#160;${n.toLocaleString()}<br>` +
+                `RENDER&#160;&#160;${fps} fps<br>` +
+                `PHYSICS&#160;${sms} ms<br>` +
+                `MODE&#160;&#160;&#160;${mode}`;
+        }
+
+        function updateRelInfo() {
+            const rel = engine.use_rel, pn1 = engine.use_1pn, pn2 = engine.use_2pn, gw = engine.gw_damping;
+            let mode = !rel ? "NEWTONIAN" : pn2 ? "2PN BOOSTED APPROX" : pn1 ? "1PN APPROX" : "PACZYNSKI-WIITA APPROX";
+            if (rel && gw) mode += " + GW LOSS";
+            $("rel-info").textContent = "MODE: " + mode;
+        }
+
+        function bindParam(id, paramKey, transform, onUpdate) {
+            $(id).addEventListener("input", function () {
+                const v = transform(this.value);
+                engine.setParams({ [paramKey]: v });
+                if (onUpdate) onUpdate(v);
+            });
+        }
+
+        bindParam("G", "G", parseFloat, v => { $("G-val").textContent = fmt(v); updateMassInfo(); });
+        bindParam("soft", "softening", parseFloat, v => $("soft-val").textContent = fmt(v));
+        bindParam("dt-sl", "dt", parseFloat, v => $("dt-val").textContent = fmt(v));
+        bindParam("damp", "damping", parseFloat, v => $("damp-val").textContent = fmt(v));
+        bindParam("vmax", "max_speed", parseFloat, v => $("vmax-val").textContent = fmt(v));
+        bindParam("c-sl", "c", parseFloat, v => { $("c-val").textContent = fmt(v); updateMassInfo(); });
+        bindParam("rest-sl", "restitution", parseFloat, v => $("rest-val").textContent = v.toFixed(2));
+        bindParam("frag-sl", "frag_threshold", parseFloat, v => $("frag-val").textContent = fmt(v));
+
+        $("mass").addEventListener("input", function () {
+            spawnMass = Math.round(parseFloat(this.value));
+            updateMassInfo();
+        });
+        $("use-rel").addEventListener("change", function () { engine.setParams({ use_rel: this.checked }); updateRelInfo(); updateMassInfo(); });
+        $("use-1pn").addEventListener("change", function () { engine.setParams({ use_1pn: this.checked }); updateRelInfo(); });
+        $("use-2pn").addEventListener("change", function () { engine.setParams({ use_2pn: this.checked }); updateRelInfo(); });
+        $("gw-damp").addEventListener("change", function () { engine.setParams({ gw_damping: this.checked }); updateRelInfo(); });
+        $("show-hor").addEventListener("change", function () { showHor = this.checked; });
+        $("show-trails").addEventListener("change", function () {
+            showTrails = this.checked;
+            if (!showTrails) trailMap.clear();
+        });
+        $("use-frag").addEventListener("change", function () { engine.setParams({ frag_enabled: this.checked }); });
+        $("tidal-frag").addEventListener("change", function () { engine.setParams({ tidal_frag: this.checked }); });
+        $("ejecta").addEventListener("change", function () { engine.setParams({ ejecta_enabled: this.checked }); });
+        $("adaptive-dt").addEventListener("change", function () { engine.setParams({ adaptive_dt: this.checked }); });
+        $("use-leapfrog").addEventListener("change", function () { engine.setParams({ use_leapfrog: this.checked }); });
+        $("realistic-radii").addEventListener("change", function () { engine.setParams({ realistic_radii: this.checked }); updateMassInfo(); });
+        $("dark-matter").addEventListener("change", function () { engine.setParams({ dark_matter: this.checked }); });
+
+        const runBtn = $("run-btn");
+        function setRunning(val) {
+            running = val;
+            runBtn.textContent = running ? "\u23F8\u00A0 PAUSE" : "\u25B6\u00A0 START";
+            runBtn.classList.toggle("active", running);
+        }
+
+        runBtn.addEventListener("click", () => setRunning(!running));
+        $("step-btn").addEventListener("click", () => { engine.step(1); updateStats(); });
+        $("clear-btn").addEventListener("click", () => { engine.clear(); updateStats(); });
+
+        // PATCH 3: Pause sim during bulk spawn, use smaller chunks, re-enable after
+        $("spawn-btn").addEventListener("click", async () => {
+            const wasRunning = running;
+            setRunning(false);
+
+            const CHUNK_SIZE = 100;
+            const TOTAL = 100;
+            const pad = 50 * VIEW_SCALE;
+            const spanW = canvas.width * VIEW_SCALE;
+            const spanH = canvas.height * VIEW_SCALE;
+            const left = cameraX - spanW / 2 + pad;
+            const top = cameraY - spanH / 2 + pad;
+
+            const spawnBtn = $("spawn-btn");
+            spawnBtn.disabled = true;
+            try {
+                for (let i = 0; i < TOTAL; i += CHUNK_SIZE) {
+                    let hitCap = false;
+                    const end = Math.min(i + CHUNK_SIZE, TOTAL);
+                    for (let j = i; j < end; j++) {
+                        if (!engine.addBody(
+                            left + Math.random() * (spanW - 2 * pad),
+                            top + Math.random() * (spanH - 2 * pad),
+                            (Math.random() - 0.5),
+                            (Math.random() - 0.5),
+                            spawnMass
+                        )) { hitCap = true; break; }
+                    }
+                    updateStats();
+                    trackCamera();
+                    await nextFrame();
+                    if (hitCap) break;
+                }
+            } finally {
+                spawnBtn.disabled = false;
+                if (wasRunning) setRunning(true);
+            }
+        });
+
+        // Init display values
+        $("G-val").textContent = fmt(engine.G);
+        $("soft-val").textContent = fmt(engine.softening);
+        $("dt-val").textContent = fmt(engine.dt);
+        $("damp-val").textContent = engine.damping.toFixed(2);
+        $("vmax-val").textContent = fmt(engine.max_speed);
+        $("c-val").textContent = fmt(engine.c);
+        $("rest-val").textContent = "0.00";
+        $("frag-val").textContent = fmt(engine.frag_threshold);
+        $("adaptive-dt").checked = engine.adaptive_dt;
+        updateMassInfo(); updateRelInfo(); updateStats();
+
+        // Start with a demonstrable binary orbit: v = sqrt(G*M/R)
+        // sqrt(25 * 100000 / 150) ≈ 129.1  →  each star gets half on opposite sides
+        engine.addBody(-150, 0, 0, -Math.sqrt(engine.G * 100000 / 150) * 0.5, 100000);
+        engine.addBody(150, 0, 0, Math.sqrt(engine.G * 100000 / 150) * 0.5, 100000);
+        trackCamera();
+        setRunning(true);
+    </script>
+</body>
+
+</html>
